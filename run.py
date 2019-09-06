@@ -64,13 +64,6 @@ def get_audio_file(url):
         logging.error("Error removing ogg file!")
         return ''
 
-    # move to folder
-    #stat = os.system('mv ' + fname_mp3 + ' ' + 'vocab')
-
-    #if stat != 0:
-    #    logging.error("Error copying mp3 file to final destination")
-    #    return ''
-
     return fname_mp3
 
 
