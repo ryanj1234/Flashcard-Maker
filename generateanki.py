@@ -12,7 +12,7 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         INPUT_FILE = sys.argv[1]
     print("Parsing input file {}".format(INPUT_FILE))
-    logging.basicConfig(level=logging.DEBUG, format='%(message)s')
+    logging.basicConfig(level=logging.INFO, format='%(message)s')
     deck = builddeck.RussianVocabDeck()
     with open(INPUT_FILE, 'r') as f:
         word = f.readline().rstrip().lower()
@@ -34,4 +34,3 @@ if __name__ == '__main__':
     print(not_found)
     print("No audio found")
     print(no_pron)
-

@@ -140,13 +140,13 @@ class Pronunciation(object):
 
     def downloaded_file(self):
         if not self.urls:
-            logging.info("No pronunciations found on wiktionary, trying Forvo...")
+            self.logger.debug("No pronunciations found on wiktionary, trying Forvo...")
             return self.download_from_forvo()
 
         return self.download_from_wiki()
 
     def get_wiki_urls(self):
-        print("Getting wiki pronunciations for word {}".format(self.word))
+        self.logger.debug("Getting wiki pronunciations for word {}".format(self.word))
         for word in self.wik:
             if word and 'pronunciations' in word:
                 urls = word['pronunciations']['audio']
@@ -157,47 +157,54 @@ class Pronunciation(object):
                 return ''
 
     def download_from_forvo(self):
-        print("Getting forvo pronunciations for word {}".format(self.word))
+        self.logger.debug("Getting forvo pronunciations for word {}".format(self.word))
         pron = Pronunciation.forvoGet.pronunciations(self.word)
 
         len_opts = len(pron)
         if len_opts == 0:
-            print("No files found!")
+            self.logger.info("No audio files found!")
             return
         elif len_opts == 1:
-            print("Only 1 file found, downloading")
+            self.logger.debug("Only 1 file found, downloading")
             fname = self.word + '.mp3'
             pron[0].download(fname)
             return self._move_to_output(fname)
 
-        for i, pronunciation in enumerate(pron):
-            if i > self.MAX_GET:
-                break
-            fname = self.create_fname(i)
-            print("Playing file {}!".format(fname))
-            pronunciation.play()
-            self.pronunciations.append(pronunciation)
-            #pronunciation.download(fname)
-
-        self.print_pron_opts()
+        self.play_opts(pron)
 
         inp = ''
         while inp != 'q':
-            inp = input("Enter the number of the file you would like to use, or enter r to hear them again: ")
+            len_opts = len(self.pronunciations)
+            inp = input("Enter a number between 0 and {} to select the file you would like to use, or enter r to hear them again: ".format(len_opts-1))
+
+            if inp == 'r':
+                print("Playing options again")
+                self.play_opts(pron)
+
             try:
                 val = int(inp)
                 if val < len_opts:
-                    print("Downloading file: {}".format(inp))
+                    self.logger.debug("Downloading file: {}".format(inp))
                     fname = self.word + '.mp3'
                     self.pronunciations[val].download(fname)
                     return self._move_to_output(fname)
                     inp = 'q'
             except ValueError:
+                print("Invalid option received")
                 pass
 
-    def print_pron_opts(self):
-        for i, pronunciation in enumerate(self.pronunciations):
-            print("{}: {}".format(i, "filename"))
+    def play_opts(self, pron):
+        self.pronunciations = []
+        for i, pronunciation in enumerate(pron):
+            if i >= self.MAX_GET:
+                break
+            try:
+                fname = self.create_fname(i)
+                print("Playing file {}".format(fname))
+                pronunciation.play()
+                self.pronunciations.append(pronunciation)
+            except KeyboardInterrupt:
+                break
 
     def create_fname(self, i):
         return self.word + str(i) + '.mp3'
