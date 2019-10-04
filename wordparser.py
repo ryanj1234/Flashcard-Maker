@@ -24,7 +24,7 @@ def get_name_from_url(url):
     decode = urllib.parse.unquote(url)
 
     fname = decode.split('/')[-1]
-    print("Name from URL: {}".format(fname))
+    logging.debug("Name from URL: {}".format(fname))
 
     return fname
 
@@ -128,7 +128,7 @@ class ForvoGetter(object):
 class Pronunciation(object):
     forvoGet = ForvoGetter('apikey.txt').getter
 
-    def __init__(self, word, quiet=False):
+    def __init__(self, word, quiet=True):
         self.logger = logging.getLogger(__name__)
         self.wik = word.wik
         self.word = word.word
@@ -214,7 +214,7 @@ class Pronunciation(object):
             return ''
 
         url = self.urls
-        print("Downloading url: " + url)
+        logging.debug("Downloading url: " + url)
         stat = os.system('wget ' + url + self.output)
         if stat != 0:
             logging.error('Error downloading audio file!')
@@ -225,7 +225,7 @@ class Pronunciation(object):
         fname_mp3 = fname_ogg.replace('.ogg', '.mp3')
 
         # convert to mp3
-        print('ffmpeg -i ' + fname_ogg + ' ' + fname_mp3 + self.output)
+        logging.debug('ffmpeg -i ' + fname_ogg + ' ' + fname_mp3 + self.output)
         stat = os.system('ffmpeg -i ' + fname_ogg + ' ' + fname_mp3 + self.output)
 
         if stat != 0:
@@ -254,31 +254,49 @@ class Pronunciation(object):
 
 class VocabWord(object):
     parser = WiktionaryParser()
+    no_base_ident = '*'
+    self_def_ident = ':'
 
     def __init__(self, word, def_only=False):
+        self.logger = logging.getLogger(__name__)
+
+        # if provided word ends in '*', dont get base word
+        if word[-1] == VocabWord.no_base_ident:
+            word = word[:-1]
+            self.get_base = False
+            self.logger.info("Base word will not be used for word {}".format(word))
+        else:
+            self.get_base = True
+
         self.word = word
         self.base_word = ''
         self.entries = []
         self.pronunciations = []
         self.audio_found = False
         self.definition_found = False
+        self.self_def = False # TODO: allow providing definition
 
-        self.logger = logging.getLogger(__name__)
-        self.logger.info("*** Generating card for word {} ***".format(word))
+        self.logger.info("Generating card for word {}".format(word))
 
-        self.wik = VocabWord.parser.fetch(word, 'russian')
-        self.get_definition()
+        if self.self_def:
+            self.entries = defs
+            self.wik = ''
+        else:
+            self.wik = VocabWord.parser.fetch(word, 'russian')
+            self.get_definition()
 
         if not def_only:
             self.get_pronunciation()
 
     def get_definition(self):
         self._get_entries()
-        self._check_for_base_word()
-        if self.base_word != '' and self.base_word != self.word:
-            self.word = self.base_word
-            self.wik = VocabWord.parser.fetch(self.word, 'russian')
-            self._get_entries()
+
+        if self.get_base:
+            self._check_for_base_word()
+            if self.base_word != '' and self.base_word != self.word:
+                self.word = self.base_word
+                self.wik = VocabWord.parser.fetch(self.word, 'russian')
+                self._get_entries()
 
     def get_pronunciation(self):
         pronunciation = Pronunciation(self)
@@ -333,12 +351,12 @@ class VocabWord(object):
                 possibilities.append(base_word)
 
         if not possibilities:
-            self.logger.info("*** No base words found! ***")
+            self.logger.debug("No base words found!")
         elif len(possibilities) > 1 and not all(elem == possibilities[0] for elem in possibilities):
             self.logger.info("Multiple base words found!")
         else:
             self.base_word = possibilities[0]
-            self.logger.info("*** Base word found: {} ***".format(self.base_word))
+            self.logger.info("Replacing with base word: {}".format(self.base_word))
 
 
 if __name__ == '__main__':

@@ -30,7 +30,16 @@ if __name__ == '__main__':
 
     deck.export()
 
-    print("No definition found")
-    print(not_found)
-    print("No audio found")
-    print(no_pron)
+    if not_found:
+        print("No definition found for the following words:")
+        for w in not_found:
+            print("\t" + w)
+    else:
+        print("Definitions found for all words!")
+
+    if no_pron:
+        print("No audio found for the following words:")
+        for w in no_pron:
+            print("\t" + w)
+    else:
+        print("Audio found for all words!")
