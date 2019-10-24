@@ -134,11 +134,15 @@ class CommandLineWikiParser(WikiParser):
     super(CommandLineWikiParser, self).__init__(*args)
 
   def to_word(self, sel=None):
+    # TODO: test
+    if self.num_words == 0:
+      print("No words found!")
+      return
     # case: user did not provide a selection and there is only one choice
-    if not sel and self.num_words == 1:
+    elif not sel and self.num_words == 1:
       sel = 0
     # case: user did not provide a selection but there are multiple choices
-    elif not sel:
+    elif not sel and self.num_words > 1:
       print("Multiple words detected {}".format(self.num_words))
       self.print_words()
       sel = self.get_selection(1, self.num_words)
@@ -201,15 +205,15 @@ class CommandLineWikiParser(WikiParser):
     return selection-1 # convert selection to an index
 
 if __name__ == '__main__':
-  # f = open('words.txt', 'r')
-  # lines = f.readlines()
-  # for w in lines:
-    # wik = CommandLineWikiParser(w[:-1])
-    # word = wik.to_word()
-    # print("Final selection: ")
-    # print(word)
-  # f.close()
-  wik = CommandLineWikiParser('ход')
-  word = wik.to_word(0)
-  print("Selection: ")
-  print(word)
+  f = open('words.txt', 'r')
+  lines = f.readlines()
+  for w in lines:
+    wik = CommandLineWikiParser(w[:-1])
+    word = wik.to_word()
+    print("Final selection: ")
+    print(word)
+  f.close()
+  # wik = CommandLineWikiParser('ход')
+  # word = wik.to_word(0)
+  # print("Selection: ")
+  # print(word)
