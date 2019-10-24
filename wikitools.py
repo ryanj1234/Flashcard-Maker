@@ -1,4 +1,3 @@
-import os
 import json
 import re
 import logging
@@ -10,7 +9,7 @@ logging.basicConfig(level=logging.INFO)
 
 
 class WikiWord(VocabWord):
-    def __init__(self, word, dat, audio=[]):
+    def __init__(self, word, dat, audio=None):
         super(WikiWord, self).__init__('')
         self.word = word
         self.part_of_speech = ''
@@ -46,7 +45,7 @@ class WikiWord(VocabWord):
                 self._parse_desc(t)
             else:
                 bw = self.find_base_word(t)
-                if bw:
+                if bw and bw not in self.base_words:
                     self.base_words.append(bw)
                 self.add_definition(t)
 
@@ -64,6 +63,15 @@ class WikiWord(VocabWord):
         return strip_accents(expr.group(1))
 
 
+def is_empty(wiki_dat):
+    for w in wiki_dat:
+        if w['etymology'] != '':
+            return False
+        elif len(w['definitions']) > 0:
+            return False
+    return True
+
+
 class WikiParser:
     parser = WiktionaryParser()
 
@@ -75,7 +83,7 @@ class WikiParser:
         self.opts = opts
         self.found = False
 
-        if self.is_empty(raw_dat):
+        if is_empty(raw_dat):
             print("No data found for word {}!".format(word))
 
         for w in raw_dat:
@@ -87,14 +95,6 @@ class WikiParser:
 
     def found(self):
         return self.found
-
-    def is_empty(self, wiki_dat):
-        for w in wiki_dat:
-            if w['etymology'] != '':
-                return False
-            elif len(w['definitions']) > 0:
-                return False
-        return True
 
     @property
     def num_words(self):
@@ -137,6 +137,7 @@ class CommandLineWikiParser(WikiParser):
 
     def to_word(self, sel=None):
         # TODO: test
+        sel_made = False
         if self.num_words == 0:
             print("No words found!")
             return
@@ -148,6 +149,7 @@ class CommandLineWikiParser(WikiParser):
             print("Multiple words detected {}".format(self.num_words))
             self.print_words()
             sel = self.get_selection(1, self.num_words)
+            sel_made = True
 
         # case: there is a base word in the selection and it is the only def
         if self.words[sel].num_base == 1 and self.words[sel].num_defs == 1:
@@ -197,7 +199,7 @@ class CommandLineWikiParser(WikiParser):
             except ValueError:
                 selection = -1
 
-            if selection >= sel_min and selection <= sel_max:
+            if sel_min <= selection <= sel_max:
                 break
             else:
                 print("Please input a value between {} and {}".format(sel_min, sel_max))
@@ -210,7 +212,9 @@ class CommandLineWikiParser(WikiParser):
 if __name__ == '__main__':
     f = open('words.txt', 'r')
     lines = f.readlines()
-    for w in lines:
+    for w in lines[:-1]:
+        if not w:
+            continue
         wik = CommandLineWikiParser(w[:-1])
         word = wik.to_word()
         print("Final selection: ")

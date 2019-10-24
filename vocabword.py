@@ -42,7 +42,7 @@ class VocabWord(object):
     def __str__(self):
         self_str = '{}: {}\n'.format(self.word, self.part_of_speech)
         for i, d in enumerate(self.definitions):
-            self_str += '\t{}. {}\n'.format(i + 1, d['text'])
+            self_str += '\t{}. {}\n'.format(i + 1, strip_accents(d['text']))
             for ex in d['examples']:
                 self_str += '\t\t-{}\n'.format(ex)
 

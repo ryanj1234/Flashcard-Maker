@@ -1,8 +1,6 @@
-import pytest
 from wikitools import WikiParser
 from wikitools import CommandLineWikiParser
 from wikitools import strip_accents
-from wiktionaryparser import WiktionaryParser
 from unittest.mock import patch
 import json
 import os
