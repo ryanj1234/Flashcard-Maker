@@ -31,6 +31,9 @@ class VocabWord(object):
     def get_definition(self, idx):
         return strip_accents(self.definitions[idx]['text'])
 
+    def found(self):
+        return self.found
+
     @property
     def num_defs(self):
         return len(self.definitions)

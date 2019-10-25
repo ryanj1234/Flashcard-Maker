@@ -93,9 +93,6 @@ class WikiParser:
                 self.words.append(ww)
                 self.base_words += ww.base_words
 
-    def found(self):
-        return self.found
-
     @property
     def num_words(self):
         return len(self.words)
@@ -131,6 +128,18 @@ class WikiParser:
         return self_str
 
 
+def get_input(msg):
+    return input(msg)
+
+
+def get_yn():
+    while True:
+        inp = get_input('Enter Selection (y/n): ')
+        if inp == 'y' or inp == 'n':
+            break
+    return inp
+
+
 class CommandLineWikiParser(WikiParser):
     def __init__(self, *args):
         super(CommandLineWikiParser, self).__init__(*args)
@@ -159,12 +168,12 @@ class CommandLineWikiParser(WikiParser):
         elif self.words[sel].num_base == 1 and self.words[sel].num_defs > 1:
             self.print_words()
             print("Use base word {}?".format(self.words[sel].base_words[0]))
-            res = self.get_yn()
+            res = get_yn()
             if res == 'y':
                 base_wik = CommandLineWikiParser(self.words[sel].base_words[0])
                 return base_wik.to_word()
         # there are multiple base words
-        elif len(self.words[sel].base_words) > 1:
+        elif self.words[sel].num_base > 1:
             self.print_base_words()
             print("FIXME: Select the word you would like to use: ")
             base_wik = CommandLineWikiParser(self.words[sel].base_words[0])
@@ -172,28 +181,18 @@ class CommandLineWikiParser(WikiParser):
 
         return super(CommandLineWikiParser, self).to_word(sel)
 
-    def get_input(self, msg):
-        return input(msg)
-
     def print_words(self):
-        for i, w in enumerate(self.words):
-            print('{}) {}'.format(i + 1, w))
+        for i, wor in enumerate(self.words):
+            print('{}) {}'.format(i + 1, wor))
 
     def print_base_words(self):
-        for i, w in enumerate(self.base_words):
-            print('{}) {}'.format(i + 1, w))
-
-    def get_yn(self):
-        while True:
-            inp = self.get_input('Enter Selection (y/n): ')
-            if inp == 'y' or inp == 'n':
-                break
-        return inp
+        for i, wor in enumerate(self.base_words):
+            print('{}) {}'.format(i + 1, wor))
 
     def get_selection(self, sel_min, sel_max):
         selection = -1
         while True:
-            c = self.get_input("Select ({}-{}): ".format(sel_min, sel_max))
+            c = get_input("Select ({}-{}): ".format(sel_min, sel_max))
             try:
                 selection = int(c)
             except ValueError:

@@ -5,10 +5,12 @@ from unittest.mock import patch
 import json
 import os
 
+data_dir = ''
+
 
 def build_obj_from_file(fname, lang):
     data = ''
-    with open(os.path.join('test', fname + '_data.txt')) as json_file:
+    with open(os.path.join(data_dir, fname + '_data.txt')) as json_file:
         data = json.load(json_file)
     return data
 
@@ -138,7 +140,7 @@ def test_command_line_single():
     w = wik.to_word()
     assert w.word == 'колотить'
 
-    with patch('wikitools.CommandLineWikiParser.get_input') as mock_input:
+    with patch('wikitools.get_input') as mock_input:
         mock_input.side_effect = '0'
         w = wik.to_word(0)
 
@@ -150,7 +152,7 @@ def test_command_line_multi():
         mock_fetch.side_effect = build_obj_from_file
         wik = CommandLineWikiParser('пила')
 
-        with patch('wikitools.CommandLineWikiParser.get_input') as mock_input:
+        with patch('wikitools.get_input') as mock_input:
             mock_input.return_value = '1'
             w1 = wik.to_word()
             mock_input.return_value = '2'
@@ -173,7 +175,7 @@ def test_command_base_within():
         mock_fetch.side_effect = build_obj_from_file
         wik = CommandLineWikiParser('пугаться')
 
-        with patch('wikitools.CommandLineWikiParser.get_input') as mock_input:
+        with patch('wikitools.get_input') as mock_input:
             mock_input.return_value = 'y'
             w1 = wik.to_word()
             mock_input.return_value = 'n'

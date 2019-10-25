@@ -1,19 +1,26 @@
 import wikitools
+from parsers import SelfParse
 
 
-class Flashcard():
-    def __init__(self, word, language='russian', opts=[]):
+class Flashcard(object):
+    def __init__(self, word, language='russian', opts=None):
         self.word = word
         self.language = language
-        self.opts = opts
+
+        if opts is not None:
+            self.opts = opts
+        else:
+            self.opts = []
+
         self.defs = []
-
         self._parsers = []
-
         self.has_def = False
         self.has_audio = False
 
-        if 'no_cmd_line' in opts:
+        if 'self_parse' in self.opts:
+            self._parsers.append(SelfParse)
+
+        if 'no_cmd_line' in self.opts:
             self._parsers.append(wikitools.WikiParser)
         else:
             self._parsers.append(wikitools.CommandLineWikiParser)
