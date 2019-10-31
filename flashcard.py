@@ -27,6 +27,10 @@ class Flashcard(object):
 
         self._parse()
 
+    @property
+    def num_defs(self):
+        return len(self.defs)
+
     def _parse(self):
         for p in self._parsers:
             parser = p(self.word, self.language, self.opts)
@@ -42,5 +46,6 @@ class Flashcard(object):
 
 
 if __name__ == '__main__':
-    card = Flashcard('коотить')
-    print(card.get_def(0))
+    card = Flashcard('идти')
+    for i in range(card.num_defs):
+        print(card.get_def(i))

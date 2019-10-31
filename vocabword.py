@@ -18,14 +18,16 @@ def strip_accents(s):
 
 
 class VocabWord(object):
-    def __init__(self, word, part_of_speech=''):
+    def __init__(self, word, part_of_speech='', audio=None):
         self.logger = logging.getLogger(__name__)
         self.word = word
         self.part_of_speech = part_of_speech
         self.definitions = []
         self.base_words = []
+        self.audio = audio if audio else []
 
-    def add_definition(self, def_str, examples=[]):
+    def add_definition(self, def_str, examples=None):
+        examples = examples if examples else []
         self.definitions.append({'text': def_str, 'examples': examples})
 
     def get_definition(self, idx):
@@ -33,6 +35,10 @@ class VocabWord(object):
 
     def found(self):
         return self.found
+
+    @property
+    def has_audio(self):
+        return len(self.audio) > 0
 
     @property
     def num_defs(self):

@@ -5,11 +5,13 @@ from vocabword import VocabWord
 
 class ParserBase(ABC):
     @abstractmethod
-    def found(self):
+    def to_word(self, selection):
         pass
 
+
+class AudioParser(ABC):
     @abstractmethod
-    def to_word(self):
+    def get_file(self):
         pass
 
 
@@ -53,10 +55,6 @@ class SelfParse(ParserBase):
     def num_words(self):
         return len(self.words)
 
-    @property
-    def num_words(self):
-        return len(self.words)
-
     def to_word(self, selection=0):
         return self.words[selection]
 
@@ -67,5 +65,6 @@ class SelfParse(ParserBase):
 
         return self_str
 
-    if __name__ == '__main__':
-        pass
+
+if __name__ == '__main__':
+    pass
