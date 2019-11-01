@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import logging
 from vocabword import VocabWord
-
+import pyforvo
 
 class ParserBase(ABC):
     @abstractmethod
@@ -66,5 +66,20 @@ class SelfParse(ParserBase):
         return self_str
 
 
+api_key = '8d86a10989e5591e42dfa70e38197c5e' # TODO: move to file
+
+
+class ForvoParser(AudioParser):
+    forvo = pyforvo.Forvo(api_key)
+
+    def __init__(self, word, pref_user=None, language='ru'):
+        self.word = word
+        self.prons = ForvoParser.forvo.get_pronunciations(self.word, language)
+        print("{} pronunciations found".format(len(self.prons)))
+
+    def get_file(self):
+        pass
+
+
 if __name__ == '__main__':
-    pass
+    a = ForvoParser('идти')
