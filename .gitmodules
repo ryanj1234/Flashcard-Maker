@@ -1,0 +1,3 @@
+[submodule "pyforvo"]
+	path = pyforvo
+	url = git@github.com:ryanj1234/pyforvo.git

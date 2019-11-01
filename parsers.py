@@ -1,7 +1,9 @@
+import os
 from abc import ABC, abstractmethod
 import logging
 from vocabword import VocabWord
 import pyforvo
+
 
 class ParserBase(ABC):
     @abstractmethod
@@ -66,20 +68,98 @@ class SelfParse(ParserBase):
         return self_str
 
 
-api_key = '8d86a10989e5591e42dfa70e38197c5e' # TODO: move to file
+with open('api.txt', 'r') as w:
+    api_key = w.read().rstrip()
+
+
+def get_forvo_filename(word):
+    return 'pronunciation_{}_{}.mp3'.format(word.language, word.word)
 
 
 class ForvoParser(AudioParser):
     forvo = pyforvo.Forvo(api_key)
 
-    def __init__(self, word, pref_user=None, language='ru'):
+    def __init__(self, word, pref_user=None, language='ru', out_dir='.media'):
+        self.logger = logging.getLogger(__name__)
         self.word = word
+        self.out_dir = out_dir
+        self.pronunciation = None
+        if pref_user:
+            self.pref_user = pref_user
+
         self.prons = ForvoParser.forvo.get_pronunciations(self.word, language)
-        print("{} pronunciations found".format(len(self.prons)))
+
+        if not os.path.exists(self.out_dir):
+            os.mkdir(self.out_dir)
+
+        self.file_path = ''
+
+        if pref_user:
+            for p in self.prons:
+                if p.username == pref_user:
+                    self.pronunciation = p
+                    break
+                    
+    @property
+    def num_prons(self):
+        return len(self.prons)
+
+    def select(self, idx):
+        self.pronunciation = self.prons[idx]
 
     def get_file(self):
-        pass
+        return self.file_path
+
+    def _download(self):
+        if self.pronunciation:
+            self.file_path = os.path.join(self.out_dir, get_forvo_filename(self.pronunciation))
+            self.pronunciation.download(path=self.file_path)
+        else:
+            self.logger.error('No pronunciations')
+
+
+def get_input(msg):
+    return input(msg)
+
+
+class CommandLineForvoParser(ForvoParser):
+    def __init__(self, *args):
+        super(CommandLineForvoParser, self).__init__(*args)
+
+    def download(self):
+        if not self.num_prons:
+            print("No pronunciations!")
+            return
+
+        if self.num_prons > 1:
+            self.print_options()
+            selection = self.get_selection(1, self.num_prons)
+            self.pronunciation = self.prons[selection]
+
+        self._download()
+
+    def print_options(self):
+        for i, p in enumerate(self.prons):
+            print("{}): {}".format(i + 1, p))
+
+    def get_selection(self, sel_min, sel_max):
+        while True:
+            c = get_input("Select ({}-{}): ".format(sel_min, sel_max))
+            try:
+                selection = int(c)
+            except ValueError:
+                selection = -1
+
+            if sel_min <= selection <= sel_max:
+                break
+            else:
+                print("Please input a value between {} and {}".format(sel_min, sel_max))
+
+        self.logger.debug('User selected %d', selection)
+
+        return selection - 1  # convert selection to an index
 
 
 if __name__ == '__main__':
-    a = ForvoParser('идти')
+    a = CommandLineForvoParser('идти')
+    a.download()

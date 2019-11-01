@@ -3,3 +3,5 @@ test/__pycache__
 htmlcov
 .coverage
 venv/
+.media
+api.txt
