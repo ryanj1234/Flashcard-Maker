@@ -13,8 +13,12 @@ class ParserBase(ABC):
 
 class AudioParser(ABC):
     @abstractmethod
-    def get_file(self):
+    def get_audio_file(self):
         pass
+
+    @property
+    def found(self):
+        return self._found
 
 
 class SelfParse(ParserBase):
@@ -68,8 +72,12 @@ class SelfParse(ParserBase):
         return self_str
 
 
-with open('api.txt', 'r') as w:
-    api_key = w.read().rstrip()
+try:
+    with open('api.txt', 'r') as w:
+        api_key = w.read().rstrip()
+except FileNotFoundError:
+    with open('../api.txt', 'r') as w:
+        api_key = w.read().rstrip()
 
 
 def get_forvo_filename(word):
@@ -84,6 +92,7 @@ class ForvoParser(AudioParser):
         self.word = word
         self.out_dir = out_dir
         self.pronunciation = None
+        self._found = False
         if pref_user:
             self.pref_user = pref_user
 
@@ -98,6 +107,7 @@ class ForvoParser(AudioParser):
             for p in self.prons:
                 if p.username == pref_user:
                     self.pronunciation = p
+                    self._found = True
                     break
                     
     @property
@@ -107,7 +117,7 @@ class ForvoParser(AudioParser):
     def select(self, idx):
         self.pronunciation = self.prons[idx]
 
-    def get_file(self):
+    def get_audio_file(self):
         return self.file_path
 
     def _download(self):
@@ -123,8 +133,8 @@ def get_input(msg):
 
 
 class CommandLineForvoParser(ForvoParser):
-    def __init__(self, *args):
-        super(CommandLineForvoParser, self).__init__(*args)
+    def __init__(self, *args, **kwargs):
+        super(CommandLineForvoParser, self).__init__(*args, **kwargs)
 
     def download(self):
         if not self.num_prons:

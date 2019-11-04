@@ -26,6 +26,8 @@ def test_flashcard():
     assert card.get_def(4) == 'to suit, to become (of wearing clothes)'
     assert card.get_def(5) == '(used in expressions)'
 
+    assert card.get_audio_file() == os.path.join('.media', 'Ru-идти.mp3')
+
 
 def test_selfparse():
     card = Flashcard('идти:verb:to go:to walk:(of precipitation) to fall:to function, to work:to suit, to become (of '
@@ -38,3 +40,6 @@ def test_selfparse():
     assert card.get_def(3) == 'to function, to work'
     assert card.get_def(4) == 'to suit, to become (of wearing clothes)'
     assert card.get_def(5) == '(used in expressions)'
+
+    assert card.get_audio_file() == os.path.join('.media', 'Ru-идти.mp3')
+

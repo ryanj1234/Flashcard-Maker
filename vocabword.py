@@ -25,6 +25,7 @@ class VocabWord(object):
         self.definitions = []
         self.base_words = []
         self.audio = audio if audio else []
+        self.audio_file = ''
 
     def add_definition(self, def_str, examples=None):
         examples = examples if examples else []
@@ -35,6 +36,9 @@ class VocabWord(object):
 
     def found(self):
         return self.found
+
+    def get_audio_file(self):
+        return self.audio_file
 
     @property
     def has_audio(self):

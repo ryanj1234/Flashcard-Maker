@@ -1,7 +1,6 @@
 import os
 import re
 import logging
-import socket
 
 from pydub import AudioSegment
 from wiktionaryparser import WiktionaryParser
@@ -25,7 +24,6 @@ class WikiWord(VocabWord):
         self.part_of_speech = ''
         self.audio_url = ''
         self.audio = audio if audio else []
-        self.audio_file = ''
         if dat:
             self._parse_def(dat)
 
@@ -38,9 +36,8 @@ class WikiWord(VocabWord):
     def get_audio(self, audio_sel=0):
         if self.audio_url:
             a = WikiAudioParser(self.audio_url)
-            self.audio_file = a.get_file()
+            self.audio_file = a.get_audio_file()
         else:
-            # implement forvo downloader
             print("No audio found for word {}".format(self.word))
 
     def _parse_desc(self, desc):
@@ -215,26 +212,33 @@ class WikiAudioParser(AudioParser):
         self.logger = logging.getLogger(__name__)
         self.out_dir = out_dir
         self.out_file_mp3 = ''
+        self.audio_url = audio_url
+        self._found = False
 
-        filename = wiki_url_to_file(audio_url)
+        filename = wiki_url_to_file(self.audio_url)
         if not os.path.exists(self.out_dir):
             os.mkdir(self.out_dir)
 
         self.out_file_ogg = os.path.join(self.out_dir, filename)
+
+        self.get_audio()
+
+        self.convert_to_mp3()
+
+    def get_audio(self):
         # noinspection PyBroadException
         try:
-            urllib.request.urlretrieve('http:' + audio_url, self.out_file_ogg)
+            urllib.request.urlretrieve('http:' + self.audio_url, self.out_file_ogg)
+            self._found = True
         except:
             self.logger.error("An error occurred while downloading audio file", exc_info=True)
             return
-
-        self.convert_to_mp3()
 
     def convert_to_mp3(self):
         self.out_file_mp3 = self.out_file_ogg.replace('.ogg', '.mp3')
         AudioSegment.from_file(self.out_file_ogg).export(self.out_file_mp3, format="mp3")
 
-    def get_file(self):
+    def get_audio_file(self):
         return self.out_file_mp3
 
 
