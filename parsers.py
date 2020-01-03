@@ -97,13 +97,13 @@ class ForvoParser(AudioParser):
 
         self.prons = ForvoParser.forvo.query(self.word, language, pref_user)
 
+        if self.prons.num_pron > 0:
+            self._found = True
+
         if not os.path.exists(self.out_dir):
             os.mkdir(self.out_dir)
 
         self.file_path = ''
-
-        if not self.prons.download_preferred():
-            self.logger.debug("No preferred downloads found for word %s", self.word)
 
     @property
     def num_prons(self):
@@ -135,11 +135,16 @@ class CommandLineForvoParser(ForvoParser):
             print("No pronunciations!")
             return
 
+        if self.prons.download_preferred():
+            return
+
         if self.num_prons > 1:
             self.print_options()
             selection = self.get_selection(1, self.num_prons)
-            self.pronunciation = self.prons.get(selection)
-
+        else:
+            selection = 0
+            
+        self.pronunciation = self.prons.get(selection)
         self._download()
 
     def print_options(self):

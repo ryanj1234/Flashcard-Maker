@@ -4,19 +4,10 @@ from vocabword import VocabWord
 import logging
 
 
-def to_html(defs, part_of_speech):
-    html_str = "<b>{}</b>".format(part_of_speech)
-    html_str += "<br /><ol>"
-    for d in defs:
-        html_str += "<li>{}</li>".format(d)
-
-    html_str += "</ol>"
-    return html_str
-
-
 class Flashcard(object):
     def __init__(self, word, language='russian', opts=None):
-        self.word = word
+        self.entered_word = word
+        self.word = None
         self.language = language
         self.audio_file = ''
         self._audio_parsers = []
@@ -28,6 +19,7 @@ class Flashcard(object):
             self.opts = []
 
         self.defs = []
+        self.part_of_speech = ''
         self._parsers = []
         self.has_def = False
         self.has_audio = False
@@ -52,12 +44,14 @@ class Flashcard(object):
         return len(self.defs)
 
     def _parse(self):
-        w = VocabWord(self.word)
+        w = VocabWord(self.entered_word)
         for p in self._parsers:
-            parser = p(self.word, self.language, self.opts)
+            parser = p(self.entered_word, self.language, self.opts)
             w = parser.to_word()
             if w.found():
                 self.has_def = True
+                self.part_of_speech = w.part_of_speech
+                self.word = w.word
                 for d in w.definitions:
                     self.defs.append(d)
                 break
@@ -65,18 +59,25 @@ class Flashcard(object):
         if w.has_audio:
             w.get_audio()
             self.audio_file = w.get_audio_file()
-        else:
+        elif w.found():
             for ap in self._audio_parsers:
                 logging.info("Word: %s", w.word)
                 a = ap(w.word, pref_user=self.pref_user)
+                a.download()
                 if a.found:
                     self.audio_file = a.get_audio_file()
 
     def get_def(self, idx):
         return self.defs[idx]['text']
 
+    def get_defs(self):
+        return self.defs
+
     def get_audio_file(self):
         return self.audio_file
+
+    def get_part_of_speech(self):
+        return self.part_of_speech
 
 
 if __name__ == '__main__':

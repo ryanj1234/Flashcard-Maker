@@ -5,8 +5,6 @@ import shutil
 import logging
 import os
 
-logging.basicConfig(level=logging.DEBUG)
-
 
 def create_forvo_fname(word):
     return "pronunciation_ru_{}.mp3".format(word)
@@ -116,7 +114,7 @@ class ForvoAgent(object):
             response = urllib.request.urlopen(req)
         except Exception as e:
             self.logger.error("Error downloading file", exc_info=True)
-            return {}
+            return ForvoResults({'attributes': {'total': 0}})
 
         return ForvoResults(json.loads(response.read()), preferred_users)
 
