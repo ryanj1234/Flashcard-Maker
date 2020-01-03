@@ -1,8 +1,9 @@
 import os
 from abc import ABC, abstractmethod
 import logging
-from vocabword import VocabWord
+
 import pyforvo
+from vocabword import VocabWord
 
 
 class ParserBase(ABC):
@@ -67,7 +68,7 @@ class SelfParse(ParserBase):
     def __str__(self):
         self_str = ''
         for w in self.words:
-            self_str += w.__str__() + '\n'
+            self_str += w.__str__ + '\n'
 
         return self_str
 
@@ -85,7 +86,7 @@ def get_forvo_filename(word):
 
 
 class ForvoParser(AudioParser):
-    forvo = pyforvo.Forvo(api_key)
+    forvo = pyforvo.ForvoAgent(api_key)
 
     def __init__(self, word, pref_user=None, language='ru', out_dir='.media'):
         self.logger = logging.getLogger(__name__)
@@ -93,26 +94,20 @@ class ForvoParser(AudioParser):
         self.out_dir = out_dir
         self.pronunciation = None
         self._found = False
-        if pref_user:
-            self.pref_user = pref_user
 
-        self.prons = ForvoParser.forvo.get_pronunciations(self.word, language)
+        self.prons = ForvoParser.forvo.query(self.word, language, pref_user)
 
         if not os.path.exists(self.out_dir):
             os.mkdir(self.out_dir)
 
         self.file_path = ''
 
-        if pref_user:
-            for p in self.prons:
-                if p.username == pref_user:
-                    self.pronunciation = p
-                    self._found = True
-                    break
-                    
+        if not self.prons.download_preferred():
+            self.logger.debug("No preferred downloads found for word %s", self.word)
+
     @property
     def num_prons(self):
-        return len(self.prons)
+        return self.prons.num_pron
 
     def select(self, idx):
         self.pronunciation = self.prons[idx]
@@ -122,8 +117,7 @@ class ForvoParser(AudioParser):
 
     def _download(self):
         if self.pronunciation:
-            self.file_path = os.path.join(self.out_dir, get_forvo_filename(self.pronunciation))
-            self.pronunciation.download(path=self.file_path)
+            self.file_path = self.pronunciation.download(out_dir=self.out_dir)
         else:
             self.logger.error('No pronunciations')
 
@@ -144,7 +138,7 @@ class CommandLineForvoParser(ForvoParser):
         if self.num_prons > 1:
             self.print_options()
             selection = self.get_selection(1, self.num_prons)
-            self.pronunciation = self.prons[selection]
+            self.pronunciation = self.prons.get(selection)
 
         self._download()
 
@@ -171,5 +165,6 @@ class CommandLineForvoParser(ForvoParser):
 
 
 if __name__ == '__main__':
-    a = CommandLineForvoParser('идти')
+    a = CommandLineForvoParser('идти', preferred_users='luba1980')
+    # a.print_options()
     a.download()

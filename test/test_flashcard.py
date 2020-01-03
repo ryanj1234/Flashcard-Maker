@@ -1,4 +1,4 @@
-from flashcard import Flashcard
+from flashcard import Flashcard, to_html
 import os
 import json
 from unittest.mock import patch
@@ -43,3 +43,8 @@ def test_selfparse():
 
     assert card.get_audio_file() == os.path.join('.media', 'Ru-идти.mp3')
 
+
+def test_html():
+    part_of_speech = "adjective"
+    defs = ["ardent", "violent, furious, vehement"]
+    assert to_html(defs, part_of_speech) == '<b>adjective</b><br /><ol><li>ardent</li><li>violent, furious, vehement</li></ol>'
