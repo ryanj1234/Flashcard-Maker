@@ -1,3 +1,6 @@
 [submodule "pyforvo"]
 	path = pyforvo
 	url = git@github.com:ryanj1234/pyforvo.git
+[submodule "russianwiktionaryparser"]
+	path = russianwiktionaryparser
+	url = git@github.com:ryanj1234/RussianWiktionaryParser.git

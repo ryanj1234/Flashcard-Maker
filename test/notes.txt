@@ -1,2 +1,0 @@
-From parent directory run:
-pytest --cov-report html --cov=flashcardmaker test/

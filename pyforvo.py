@@ -20,7 +20,6 @@ class ForvoEntry(object):
         self.num_votes = raw["num_votes"]
         self.path = raw["pathmp3"]
 
-    # FIXME: This should live in forvo parser
     def download(self, out_dir=''):
         hdr = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64)'}
         req = urllib.request.Request(self.path, headers=hdr)
@@ -95,17 +94,22 @@ class ForvoResults(object):
 
         return self_str
 
+    def get_highest_rating(self):
+        return self._prons[0]
+
 
 class ForvoAgent(object):
     def __init__(self, api_key):
         self.logger = logging.getLogger(__name__)
 
+        if api_key is None:
+            raise Exception('Must provide an api key to use forvo parser')
         self.api_key = api_key
 
         self.base_url = "https://apifree.forvo.com/action/word-pronunciations/format/json/word/"
         self._data = {}
 
-    def query(self, word, language, preferred_users=None):
+    def query(self, word, language, preferred_users=None) -> ForvoResults:
         url = self.base_url + "{}/id_lang_speak/138/language/{}/key/{}/".format(urllib.parse.quote(word), language, self.api_key)
         hdr = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64)'}
         req = urllib.request.Request(url, headers=hdr)
@@ -119,9 +123,33 @@ class ForvoAgent(object):
         return ForvoResults(json.loads(response.read()), preferred_users)
 
 
+class ForvoParser:
+    forvo = ForvoAgent(os.getenv('FORVO_API_KEY'))
+
+    def __init__(self, pref_users=None, language='ru'):
+        self.logger = logging.getLogger('ForvoParser')
+
+        self.pref_users = [] if pref_users is None else pref_users
+        self.language = language
+
+    def download(self, word, out_dir):
+        prons = ForvoParser.forvo.query(word, self.language, self.pref_users)
+
+        if not prons.num_pron:
+            self.logger.debug('No results found for word %s', word)
+            return None
+
+        if prons.get_preferred() is not None:
+            selection = prons.get_preferred()
+        else:
+            selection = prons.get_highest_rating()
+
+        if not os.path.exists(out_dir):
+            os.mkdir(out_dir)
+
+        return selection.download(out_dir)
+
+
 if __name__ == '__main__':
-    f = ForvoAgent('8d86a10989e5591e42dfa70e38197c5e')
-    res = f.query('идти', 'ru')
-    print(res.get(0))
-    # if not res.download_preferred():
-    #     print("No preferred options!")
+    f = ForvoParser()
+    res = f.download('идти', '.')

@@ -8,7 +8,7 @@ def to_html(defs, part_of_speech):
     html_str = "<b>{}</b>".format(part_of_speech)
     html_str += "<br /><ol>"
     for d in defs:
-        html_str += "<li>{}</li>".format(d['text'])
+        html_str += "<li>{}</li>".format(d.text)
 
     html_str += "</ol>"
     return html_str
@@ -57,21 +57,13 @@ class RussianVocabDeck(object):
 
     def add_flashcard(self, card):
         self.logger.debug("Adding word: {}".format(card.word))
-        self.logger.debug("Adding defs: {}".format(to_html(card.get_defs(), card.get_part_of_speech())))
-        self.logger.debug("Adding audio: {}".format(card.get_audio_file()))
-        self.add_note(card.word, to_html(card.get_defs(), card.get_part_of_speech()), card.get_audio_file())
+        self.logger.debug("Adding defs: {}".format(to_html(card.definitions, card.part_of_speech)))
+        self.logger.debug("Adding audio: {}".format(card.audio_file))
+        audio_file = '' if card.audio_file is None else card.audio_file
+        self.add_note(card.word, to_html(card.definitions, card.part_of_speech), audio_file)
 
     def export(self, out_file='output.apkg'):
         package = genanki.Package(self.deck)
         package.media_files = self.media_files
         package.write_to_file(out_file)
-
-
-if __name__ == '__main__':
-    deck = RussianVocabDeck()
-    c = Flashcard('отчасти')
-    deck.add_flashcard(c)
-    c = Flashcard('подразумевать')
-    deck.add_flashcard(c)
-    deck.export()
 

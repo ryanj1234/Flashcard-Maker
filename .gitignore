@@ -6,3 +6,4 @@ venv/
 .media
 api.txt
 *.apkg
+words.txt

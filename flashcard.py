@@ -1,90 +1,149 @@
-import wikitools
-from parsers import SelfParse, ForvoParser, CommandLineForvoParser
-from vocabword import VocabWord
 import logging
+import os
 
 
 class Flashcard(object):
-    def __init__(self, word, language='russian', opts=None):
-        self.entered_word = word
-        self.word = None
-        self.language = language
-        self.audio_file = ''
-        self._audio_parsers = []
-        self.pref_user = []
+    media_dir = '.media'
 
-        if opts is not None:
-            self.opts = opts
-        else:
-            self.opts = []
+    def __init__(self, entered_word, parser, audio_parser=None):
+        self._logger = logging.getLogger(f'Flashcard<{entered_word}>')
 
-        self.defs = []
-        self.part_of_speech = ''
-        self._parsers = []
-        self.has_def = False
-        self.has_audio = False
+        self._parser = parser
+        self._audio_parser = audio_parser
 
-        if 'pref_user' in self.opts:
-            self.pref_user = opts['pref_user']
+        self.entered_word = entered_word
+        self._audio_file = None
+        self.chosen_entry = None
 
-        if 'self_parse' in self.opts:
-            self._parsers.append(SelfParse)
+        entries = self._parser.fetch(entered_word)
 
-        if 'no_cmd_line' in self.opts:
-            self._parsers.append(wikitools.WikiParser)
-        else:
-            self._parsers.append(wikitools.CommandLineWikiParser)
+        if not entries:
+            self._logger.debug('Using search function to find entries')
+            entries = self._get_entries_from_search(entries, entered_word)
 
-        self._audio_parsers = [CommandLineForvoParser]
+        followed_entries = self._follow_entries_to_base(entries, 0)
+        word_list = []
+        self._base_entries = []
+        for entry in followed_entries:
+            if entry.word not in word_list:
+                self._base_entries.append(entry)
+                word_list.append(entry.word)
 
-        self._parse()
+        if len(self._base_entries) == 1:
+            self.chosen_entry = self._base_entries[0]
+            self._parse_chosen_entry()
+
+    def _parse_chosen_entry(self):
+        self.word = self.chosen_entry.word
+        if self.chosen_entry.audio_links:
+            self._download_file(self.chosen_entry.audio_links[0])
+        elif self._audio_parser is not None:
+            self._logger.info('Checking Forvo for pronunciations')
+            self._audio_file = self._audio_parser.download(self.chosen_entry.word, Flashcard.media_dir)
 
     @property
-    def num_defs(self):
-        return len(self.defs)
+    def front(self):
+        return f"{self.chosen_entry.word}: {self.chosen_entry.part_of_speech}"
 
-    def _parse(self):
-        w = VocabWord(self.entered_word)
-        for p in self._parsers:
-            parser = p(self.entered_word, self.language, self.opts)
-            w = parser.to_word()
-            if w.found():
-                self.has_def = True
-                self.part_of_speech = w.part_of_speech
-                self.word = w.word
-                for d in w.definitions:
-                    self.defs.append(d)
-                break
+    @property
+    def back(self):
+        back_str = ""
+        for i, definition in enumerate(self.chosen_entry.definitions):
+            back_str += f"\t{i + 1}. {definition.text}\n"
+        return back_str
 
-        if w.has_audio:
-            w.get_audio()
-            self.audio_file = w.get_audio_file()
-        elif w.found():
-            for ap in self._audio_parsers:
-                logging.info("Word: %s", w.word)
-                a = ap(w.word, pref_user=self.pref_user)
-                a.download()
-                if a.found:
-                    self.audio_file = a.get_audio_file()
+    @property
+    def entries(self):
+        return self._base_entries
 
-    def get_def(self, idx):
-        return self.defs[idx]['text']
+    @property
+    def definitions(self):
+        return self.chosen_entry.definitions
 
-    def get_defs(self):
-        return self.defs
+    @property
+    def part_of_speech(self):
+        return self.chosen_entry.part_of_speech
 
-    def get_audio_file(self):
-        return self.audio_file
+    @property
+    def audio_file(self):
+        return '' if self._audio_file is None else self._audio_file
 
-    def get_part_of_speech(self):
-        return self.part_of_speech
+    def __str__(self):
+        self_str = ""
+        for i, entry in enumerate(self._base_entries):
+            self_str += f"Entry {i+1} -> {entry.word}\n\t{entry.part_of_speech}\n"
+            for j, definition in enumerate(entry.definitions):
+                self_str += f"\t{j+1}. {definition.text}\n"
+                for example in definition.examples:
+                    self_str += f"\t\t* {example.text}\n"
+        return self_str
+
+    def _follow_entries_to_base(self, entries, recursion_level):
+        if recursion_level > 10:
+            raise Exception('Greater than 10 levels of recursion reached trying to follow entry to base word')
+        base_entries = []
+        for entry in entries:
+            followed_entries = entry.follow_to_base()
+            if followed_entries:
+                base_entries.extend(self._follow_entries_to_base(followed_entries, recursion_level + 1))
+            else:
+                base_entries.append(entry)
+        return base_entries
+
+    def _get_entries_from_search(self, entries, word):
+        search_results = self._parser.search(word)
+        match = check_for_match(search_results, word)
+        if match is not None:
+            entries = self._parser.fetch(match)
+            if not entries:
+                entries = self._parser.fetch(match.lower())
+            else:
+                for entry in entries:
+                    entry.tracing.append(f'Found word from search {match}')
+        else:
+            if len(search_results[1]) > 0:  # wiki returned some suggestions
+                max_checks = 3
+                for possible_entry in search_results[3][0:max_checks]:
+                    possible_entries = self._parser.fetch_from_url(possible_entry)  # fetch the first suggestion
+                    stripped_word = word.lower().replace('́', '')
+                    for entry in possible_entries:
+                        if entry.inflections is not None:
+                            inflection_set = entry.inflections.to_lower_set()
+                            for inflection in inflection_set:
+                                if stripped_word == inflection.lower().replace('́', '').replace('ё', 'е'):
+                                    print("Found word in inflections table for %s ->" % entry.word, end=' ')
+                                    entries = [entry]
+                                    break
+                            else:
+                                continue
+                            break
+                        else:
+                            if stripped_word == entry.word.lower().replace('́', '').replace('ё', 'е'):
+                                entries = [entry]
+                                entries[0].tracing.append(f"Used search to find word {entry.word}")
+                                break
+        return entries
+
+    def _download_file(self, link):
+        if not os.path.exists(Flashcard.media_dir):
+            os.mkdir(Flashcard.media_dir)
+        self._audio_file = self._parser.download_audio(link, Flashcard.media_dir)
+
+    def select_entry(self, choice_num):
+        self.chosen_entry = self._base_entries[choice_num]
+        self._parse_chosen_entry()
 
 
-if __name__ == '__main__':
-    # card = Flashcard('идти')
-    card = Flashcard('идти:verb:to go:to walk:(of precipitation) to fall:to function, to work:to suit, to become (of '
-                     'wearing clothes):(used in expressions)', opts=['self_parse'])
-    # for i in range(card.num_defs):
-    #     print(card.get_def(i))
-    #
-    # print(card.get_audio_file())
+def check_for_match(search_results, entered_word):
+    match = None
+    suggestions = search_results[1]
+    for suggestion in suggestions:
+        if entered_word == suggestion.replace('ё', 'е'):
+            logging.debug('ё match found. Replacing %s with %s', entered_word, suggestion)
+            match = suggestion
+            break
+        elif entered_word.lower() == suggestion.lower():
+            logging.debug('Capitalization issue. Replacing %s with %s', entered_word, suggestion)
+            match = suggestion
+            break
+    return match
