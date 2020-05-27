@@ -1,13 +1,13 @@
 import logging
 import os
 
+_LOG = logging.getLogger(__name__)
+
 
 class Flashcard(object):
     media_dir = '.media'
 
     def __init__(self, entered_word, parser, audio_parser=None):
-        self._logger = logging.getLogger(f'Flashcard<{entered_word}>')
-
         self._parser = parser
         self._audio_parser = audio_parser
 
@@ -18,7 +18,7 @@ class Flashcard(object):
         entries = self._parser.fetch(entered_word)
 
         if not entries:
-            self._logger.debug('Using search function to find entries')
+            _LOG.debug('Using search function to find entries')
             entries = self._get_entries_from_search(entries, entered_word)
 
         followed_entries = self._follow_entries_to_base(entries, 0)
@@ -38,7 +38,7 @@ class Flashcard(object):
         if self.chosen_entry.audio_links:
             self._download_file(self.chosen_entry.audio_links[0])
         elif self._audio_parser is not None:
-            self._logger.info('Checking Forvo for pronunciations')
+            _LOG.info('Checking Forvo for pronunciations')
             self._audio_file = self._audio_parser.download(self.chosen_entry.word, Flashcard.media_dir)
 
     @property
@@ -139,11 +139,11 @@ def check_for_match(search_results, entered_word):
     suggestions = search_results[1]
     for suggestion in suggestions:
         if entered_word == suggestion.replace('ё', 'е'):
-            logging.debug('ё match found. Replacing %s with %s', entered_word, suggestion)
+            _LOG.debug('ё match found. Replacing %s with %s', entered_word, suggestion)
             match = suggestion
             break
         elif entered_word.lower() == suggestion.lower():
-            logging.debug('Capitalization issue. Replacing %s with %s', entered_word, suggestion)
+            _LOG.debug('Capitalization issue. Replacing %s with %s', entered_word, suggestion)
             match = suggestion
             break
     return match
