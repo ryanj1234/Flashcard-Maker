@@ -1,6 +1,5 @@
 import os
 import genanki
-from flashcard import Flashcard
 import logging
 
 
