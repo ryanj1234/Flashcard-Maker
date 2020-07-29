@@ -1,19 +1,25 @@
 import os
 import genanki
 import logging
+from russianwiktionaryparser.russianwiktionaryparser.entries import WordEntry
 
 
 def to_html(defs, part_of_speech):
     html_str = "<b>{}</b>".format(part_of_speech)
-    html_str += "<br /><ol>"
+    html_str += "<ol>"
     for d in defs:
         html_str += "<li>{}</li>".format(d.text)
+        if d.examples:
+            html_str += "<div class=examples><ul>"
+            for example in d.examples:
+                html_str += f"<li>{example.text} - {example.translation}</li>"
+            html_str += "</ul></div>"
 
     html_str += "</ol>"
     return html_str
 
 
-class RussianVocabDeck(object):
+class RussianVocabDeck:
     def __init__(self, guid=205940011, name='Auto Generated Vocab'):
         self.logger = logging.getLogger(__name__)
         self.deck = genanki.Deck(
@@ -21,13 +27,14 @@ class RussianVocabDeck(object):
             name)
 
         self.model = genanki.Model(
-            1607392312,
-            'Auto Vocab',
+            1607392313,
+            'Auto Vocab With Examples',
             fields=[
                 {'name': 'Front'},
                 {'name': 'Back'},
                 {'name': 'Audio'},
             ],
+            css='.card {font-family: arial; font-size: 20px; text-align: center; color: black; background-color: white;} .front .examples { display:none }',
             templates=[
             {
                 'name': 'Card 1',
@@ -36,8 +43,8 @@ class RussianVocabDeck(object):
             },
             {
                 'name': 'Card 2',
-                'qfmt': '{{Back}}',
-                'afmt': '{{FrontSide}}<hr id="answer">{{Front}}{{Audio}}',
+                'qfmt': '<div class=front>{{Back}}</div>',
+                'afmt': '{{Back}}<hr id="answer">{{Front}}{{Audio}}',
             }]
         )
 
@@ -54,7 +61,7 @@ class RussianVocabDeck(object):
         note = genanki.Note(model=self.model, fields=[front, back, audio])
         self.deck.add_note(note)
 
-    def add_flashcard(self, card):
+    def add_flashcard(self, card: WordEntry):
         self.logger.debug("Adding word: {}".format(card.word))
         self.logger.debug("Adding defs: {}".format(to_html(card.definitions, card.part_of_speech)))
         self.logger.debug("Adding audio: {}".format(card.audio_file))
