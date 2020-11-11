@@ -10,21 +10,38 @@ from PyQt5.QtWidgets import QWidget, QApplication, QLineEdit, QAction, QStyle, Q
 import builddeck
 from flashcard import Flashcard
 from pyforvo import ForvoParser
-from russianwiktionaryparser import WiktionaryParser
-from builddeck import to_html
+from russianwiktionaryparser.russianwiktionaryparser import WiktionaryParser
+
+
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
+
+def to_html(card: Flashcard) -> str:
+    html_str = "<b>{}</b>".format(card.part_of_speech)
+    html_str += "<ol>"
+    for d in card.definitions:
+        html_str += f"<li>{d.text}</li><ul>"
+        for e in d.examples:
+            html_str += f"<li>{e.text}</li>"
+        html_str += "</ul>"
+
+    html_str += "</ol>"
+    return html_str
 
 
 class ProcessWords(QThread):
     word_start = pyqtSignal(str)
     label_update = pyqtSignal(str)
     word_done = pyqtSignal(int)
+    not_found = pyqtSignal(str, int)
     add_card = pyqtSignal(Flashcard)
-    need_decision = pyqtSignal(Flashcard)
+    need_decision = pyqtSignal(str, Flashcard)
     done = pyqtSignal()
 
     WORD_FOUND = 1
     WORD_NOT_FOUND = 2
-    WORD_FOUND_NO_AUDIO = 2
+    WORD_FOUND_NO_AUDIO = 3
 
     def __init__(self, words):
         super().__init__()
@@ -38,12 +55,13 @@ class ProcessWords(QThread):
             card = Flashcard(word, WiktionaryParser(), ForvoParser())
             if len(card.entries) == 0:
                 self.word_done.emit(ProcessWords.WORD_NOT_FOUND)
+                self.not_found.emit(word, ProcessWords.WORD_NOT_FOUND)
             elif len(card.entries) == 1:
                 self.word_done.emit(ProcessWords.WORD_FOUND)
                 self.add_card.emit(card)
             else:
                 # get decision
-                self.need_decision.emit(card)
+                self.need_decision.emit(word, card)
                 while self.decision < 0:
                     time.sleep(0.1)
 
@@ -136,22 +154,29 @@ class ProgressBar(QProgressDialog):
         self.setWindowTitle('Processing Words')
         self.setLabelText('Beginning')
         self.progress = 0
+        self.center()
 
     def on_label_update(self, label_text):
         self.setLabelText(label_text)
 
-    def on_count_changed(self, value):
+    def on_count_changed(self):
         self.progress = self.progress + 1
         self.setValue(self.progress)
 
-    def get_decision(self, card):
-        self.choice = WordChoice(card)
+    def get_decision(self, entered_word, card):
+        self.choice = WordChoice(entered_word, card)
         self.choice.decision_made.connect(self.made_decision)
         self.choice.show()
 
     def made_decision(self, decision):
         self.choice.hide()
         self.make_decision.emit(decision)
+
+    def center(self):
+        qr = self.frameGeometry()
+        cp = QDesktopWidget().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
 
 
 class Controller:
@@ -160,6 +185,13 @@ class Controller:
         self.no_def = []
         self.no_audio = []
         self.cards = []
+
+    def restart(self):
+        self.results.hide()
+        self.no_def = []
+        self.no_audio = []
+        self.cards = []
+        self.word_entry.show()
 
     def show_word_entry(self):
         self.word_entry = WordEntry()
@@ -172,6 +204,7 @@ class Controller:
         self.process_thread.start()
         self.process_thread.label_update.connect(self.progress_bar.on_label_update)
         self.process_thread.word_done.connect(self.progress_bar.on_count_changed)
+        self.process_thread.not_found.connect(self.word_processed)
         self.process_thread.add_card.connect(self.on_add_card)
         self.process_thread.need_decision.connect(self.progress_bar.get_decision)
         self.progress_bar.make_decision.connect(self.process_thread.get_decision)
@@ -184,8 +217,9 @@ class Controller:
 
     def display_results(self):
         self.results = ResultsDisplay(self.cards, self.no_def)
+        self.results.restart_clicked.connect(self.restart)
         self.results.show()
-        self.word_entry.close()
+        self.word_entry.hide()
 
     def word_processed(self, word, status):
         if status == ProcessWords.WORD_FOUND_NO_AUDIO:
@@ -198,15 +232,16 @@ class EntryChoice(QPushButton):
     def __init__(self, num, text):
         super(EntryChoice, self).__init__(text)
         self.num = num
+        self.setFixedWidth(100)
 
 
 class WordChoice(QWidget):
     decision_made = pyqtSignal(int)
 
-    def __init__(self, card):
+    def __init__(self, entered_word, card):
         super(WordChoice, self).__init__()
 
-        self.setWindowTitle('Choose Entry')
+        self.setWindowTitle(f'Choose Entry For {entered_word}')
 
         grid = QGridLayout()
         grid.setSpacing(10)
@@ -214,9 +249,14 @@ class WordChoice(QWidget):
         for i, card in enumerate(card.entries):
             button1 = EntryChoice(i, f'{card.word}')
             button1.clicked.connect(self.on_choose)
-            card1 = QLabel(to_html(card.definitions, card.part_of_speech))
+            card1 = QLabel(to_html(card))
 
-            grid.addWidget(button1, i, 0)
+            card1.setStyleSheet(
+                "margin: 1px; padding: 7px; background-color: rgba(255,255,255,255); color: rgba(0,0,0,255);"
+                "border-style: solid; border-radius: 3px; border-width: 0.5px; border-color: rgba(127,127,255,255);"
+            )
+
+            grid.addWidget(button1, i, 0, QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
             grid.addWidget(card1, i, 1)
 
         self.setLayout(grid)
@@ -233,6 +273,8 @@ class WordChoice(QWidget):
 
 
 class ResultsDisplay(QWidget):
+    restart_clicked = pyqtSignal()
+
     def __init__(self, cards: [Flashcard], not_found: list, *args, **kwargs):
         super(ResultsDisplay, self).__init__(*args, **kwargs)
         self.cards = cards
@@ -274,10 +316,10 @@ class ResultsDisplay(QWidget):
         self.vbox.addWidget(self.table)
 
         self.export_button = QPushButton('Export')
-        self.cancel_button = QPushButton('Cancel')
+        self.cancel_button = QPushButton('Restart')
 
         self.export_button.clicked.connect(self.export_deck)
-        self.cancel_button.clicked.connect(QApplication.instance().quit)
+        self.cancel_button.clicked.connect(self.restart)
 
         hbox = QHBoxLayout()
         hbox.addWidget(self.export_button)
@@ -289,6 +331,10 @@ class ResultsDisplay(QWidget):
         self.setLayout(self.vbox)
         self.setWindowTitle('Results')
         self.resize(500, self.height())
+
+    def restart(self):
+        self.deck = builddeck.RussianVocabDeck()
+        self.restart_clicked.emit()
 
     def export_deck(self):
         self.deck.export()

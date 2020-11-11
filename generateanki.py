@@ -2,7 +2,7 @@ import sys
 import logging
 import builddeck
 from flashcard import Flashcard
-from russianwiktionaryparser import WiktionaryParser
+from russianwiktionaryparser.russianwiktionaryparser import WiktionaryParser
 from pyforvo import ForvoParser
 
 logging.basicConfig(level=logging.INFO, format='%(message)s')

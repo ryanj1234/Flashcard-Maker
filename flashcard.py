@@ -1,5 +1,8 @@
 import logging
 import os
+from russianwiktionaryparser.russianwiktionaryparser.entries import WordEntry
+from russianwiktionaryparser.russianwiktionaryparser.parsers import Parser
+from russianwiktionaryparser.russianwiktionaryparser.entries import WordDefinition
 
 _LOG = logging.getLogger(__name__)
 
@@ -14,24 +17,32 @@ class Flashcard(object):
         self.entered_word = entered_word
         self._audio_file = None
         self.chosen_entry = None
-
-        entries = self._parser.fetch(entered_word)
-
-        if not entries:
-            _LOG.debug('Using search function to find entries')
-            entries = self._get_entries_from_search(entries, entered_word)
-
-        followed_entries = self._follow_entries_to_base(entries, 0)
-        word_list = []
         self._base_entries = []
-        for entry in followed_entries:
-            if entry.word not in word_list:
-                self._base_entries.append(entry)
-                word_list.append(entry.word)
 
-        if len(self._base_entries) == 1:
-            self.chosen_entry = self._base_entries[0]
-            self._parse_chosen_entry()
+        self_parser = SelfParser()
+        if self_parser.can_handle_entry(entered_word):
+            self_entry = self_parser.fetch(entered_word)
+            self._base_entries.append(self_entry)
+            self.word = self._base_entries[0].word
+            self.chosen_entry = self_entry
+            if self._audio_parser is not None:
+                _LOG.info('Checking Forvo for pronunciations')
+                self._audio_file = self._audio_parser.download(self.word, Flashcard.media_dir)
+        else:
+            entries = self._parser.fetch(entered_word)
+
+            if not entries:
+                _LOG.debug('Using search function to find entries')
+                entries = self._get_entries_from_search(entries, entered_word)
+
+            followed_entries = self._follow_entries_to_base(entries, 0)
+            for entry in followed_entries:
+                if entry not in self._base_entries:
+                    self._base_entries.append(entry)
+
+            if len(self._base_entries) == 1:
+                self.chosen_entry = self._base_entries[0]
+                self._parse_chosen_entry()
 
     def _parse_chosen_entry(self):
         self.word = self.chosen_entry.word
@@ -80,7 +91,8 @@ class Flashcard(object):
 
     def _follow_entries_to_base(self, entries, recursion_level):
         if recursion_level > 10:
-            raise Exception('Greater than 10 levels of recursion reached trying to follow entry to base word')
+            # raise Exception('Greater than 10 levels of recursion reached trying to follow entry to base word')
+            return entries
         base_entries = []
         for entry in entries:
             followed_entries = entry.follow_to_base()
@@ -147,3 +159,54 @@ def check_for_match(search_results, entered_word):
             match = suggestion
             break
     return match
+
+
+class SelfParsedWord(WordDefinition):
+    def __init__(self, definition):
+        super().__init__()
+        self._text = definition
+        self._examples = []
+
+    @property
+    def text(self):
+        return self._text
+
+    @property
+    def examples(self):
+        return self._examples
+
+
+class SelfParsedEntry(WordEntry):
+    def __init__(self, word, part_of_speech, definition, *args, **kwargs):
+        super().__init__(word, *args, **kwargs)
+        self.part_of_speech = part_of_speech
+        self.definitions = [SelfParsedWord(definition)]
+        self.audio_file = None
+
+
+class SelfParser(Parser):
+    def can_handle_entry(self, entry: any) -> bool:
+        if isinstance(entry, str):
+            if ':' in entry:
+                return True
+        return False
+
+    def fetch(self, entry) -> SelfParsedEntry:
+        try:
+            word, part_of_speech, definition = entry.split(':')
+        except ValueError:
+            _LOG.error('Incorrect format for entry %s', entry)
+            word = str(entry)
+            part_of_speech = ''
+            definition = ''
+        return SelfParsedEntry(word, part_of_speech, definition)
+
+
+def self_parse(entry: str) -> WordEntry:
+    try:
+        word, part_of_speech, definition = entry.split(':')
+    except ValueError:
+        _LOG.error('Incorrect format for entry %s', entry)
+        return WordEntry('Error')
+
+    return SelfParsedEntry(word, part_of_speech, definition)
