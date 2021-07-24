@@ -1,7 +1,6 @@
 import os
 import genanki
 import logging
-from russianwiktionaryparser.russianwiktionaryparser.entries import WordEntry
 
 
 def to_html(defs, part_of_speech):
@@ -61,7 +60,7 @@ class RussianVocabDeck:
         note = genanki.Note(model=self.model, fields=[front, back, audio])
         self.deck.add_note(note)
 
-    def add_flashcard(self, card: WordEntry):
+    def add_flashcard(self, card):
         self.logger.debug("Adding word: {}".format(card.word))
         self.logger.debug("Adding defs: {}".format(to_html(card.definitions, card.part_of_speech)))
         self.logger.debug("Adding audio: {}".format(card.audio_file))

@@ -79,8 +79,9 @@ class Flashcard(object):
         return self_str
 
     def _follow_entries_to_base(self, entries, recursion_level):
-        if recursion_level > 10:
-            raise Exception('Greater than 10 levels of recursion reached trying to follow entry to base word')
+        if recursion_level > 3:
+            # raise Exception('Greater than 10 levels of recursion reached trying to follow entry to base word')
+            return entries
         base_entries = []
         for entry in entries:
             followed_entries = entry.follow_to_base()

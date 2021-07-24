@@ -2,7 +2,7 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/genanki" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/russianwiktionaryparser" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/russianwiktionaryparser/genanki" vcs="Git" />
   </component>
 </project>
