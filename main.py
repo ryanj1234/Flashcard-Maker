@@ -18,6 +18,7 @@ class ProcessWords(QThread):
     word_start = pyqtSignal(str)
     label_update = pyqtSignal(str)
     word_done = pyqtSignal(int)
+    word_not_found = pyqtSignal(str)
     add_card = pyqtSignal(Flashcard)
     need_decision = pyqtSignal(Flashcard)
     done = pyqtSignal()
@@ -38,6 +39,7 @@ class ProcessWords(QThread):
             card = Flashcard(word, WiktionaryParser(), ForvoParser())
             if len(card.entries) == 0:
                 self.word_done.emit(ProcessWords.WORD_NOT_FOUND)
+                self.word_not_found.emit(word)
             elif len(card.entries) == 1:
                 self.word_done.emit(ProcessWords.WORD_FOUND)
                 self.add_card.emit(card)
@@ -172,6 +174,7 @@ class Controller:
         self.process_thread.start()
         self.process_thread.label_update.connect(self.progress_bar.on_label_update)
         self.process_thread.word_done.connect(self.progress_bar.on_count_changed)
+        self.process_thread.word_not_found.connect(self.word_not_found)
         self.process_thread.add_card.connect(self.on_add_card)
         self.process_thread.need_decision.connect(self.progress_bar.get_decision)
         self.progress_bar.make_decision.connect(self.process_thread.get_decision)
@@ -187,11 +190,8 @@ class Controller:
         self.results.show()
         self.word_entry.close()
 
-    def word_processed(self, word, status):
-        if status == ProcessWords.WORD_FOUND_NO_AUDIO:
-            self.no_audio.append(word)
-        elif status == ProcessWords.WORD_NOT_FOUND:
-            self.no_def.append(word)
+    def word_not_found(self, word):
+        self.no_def.append(word)
 
 
 class EntryChoice(QPushButton):
