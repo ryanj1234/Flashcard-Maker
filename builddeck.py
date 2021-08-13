@@ -18,35 +18,30 @@ def to_html(defs, part_of_speech):
     return html_str
 
 
-class RussianVocabDeck:
-    def __init__(self, guid=205940011, name='Auto Generated Vocab'):
+def get_deck(language):
+    if language == 'Russian':
+        return RussianVocabDeck()
+    elif language == 'Spanish':
+        return SpanishVocabDeck()
+    else:
+        raise Exception(f"Unimplemented language {language}")
+
+
+class VocabDeck:
+    def __init__(self, guid, name, model):
         self.logger = logging.getLogger(__name__)
+        self.guid = guid
+        self.name = name
         self.deck = genanki.Deck(
             guid,
             name)
-
         self.model = genanki.Model(
-            1607392313,
-            'Auto Vocab With Examples',
-            fields=[
-                {'name': 'Front'},
-                {'name': 'Back'},
-                {'name': 'Audio'},
-            ],
-            css='.card {font-family: arial; font-size: 20px; text-align: center; color: black; background-color: white;} .front .examples { display:none }',
-            templates=[
-            {
-                'name': 'Card 1',
-                'qfmt': 'Listen...<br>{{Audio}}',
-                'afmt': '{{Front}}<hr id="answer">{{Back}}',
-            },
-            {
-                'name': 'Card 2',
-                'qfmt': '<div class=front>{{Back}}</div>',
-                'afmt': '{{Back}}<hr id="answer">{{Front}}{{Audio}}',
-            }]
+            model['guid'],
+            model['name'],
+            fields=model['fields'],
+            css=model['css'],
+            templates=model['templates']
         )
-
         self.media_files = []
 
     def add_note(self, front, back, audio_file=''):
@@ -72,3 +67,60 @@ class RussianVocabDeck:
         package.media_files = self.media_files
         package.write_to_file(out_file)
 
+
+class RussianVocabDeck(VocabDeck):
+    def __init__(self):
+        guid = 205940011
+        name = 'Auto Generated Vocab'
+        model = {
+            'guid': 1607392313,
+            'name': 'Auto Vocab With Examples',
+            'fields': [
+                {'name': 'Front'},
+                {'name': 'Back'},
+                {'name': 'Audio'},
+            ],
+            'css': '.card {font-family: arial; font-size: 20px; text-align: center; color: black; background-color: white;} .front .examples { display:none }',
+            'templates': [
+                {
+                    'name': 'Card 1',
+                    'qfmt': 'Listen...<br>{{Audio}}',
+                    'afmt': '{{Front}}<hr id="answer">{{Back}}',
+                },
+                {
+                    'name': 'Card 2',
+                    'qfmt': '<div class=front>{{Back}}</div>',
+                    'afmt': '{{Back}}<hr id="answer">{{Front}}{{Audio}}',
+            }]
+        }
+
+        super().__init__(guid, name, model)
+
+
+class SpanishVocabDeck(VocabDeck):
+    def __init__(self):
+        guid = 674801255
+        name = 'Spanish Auto Generated Vocab'
+        model = {
+            'guid': 146379426,
+            'name': 'Auto Vocab With Examples Show Word',
+            'fields': [
+                {'name': 'Front'},
+                {'name': 'Back'},
+                {'name': 'Audio'},
+            ],
+            'css': '.card {font-family: arial; font-size: 20px; text-align: center; color: black; background-color: white;} .front .examples { display:none }',
+            'templates': [
+                {
+                    'name': 'Card 1',
+                    'qfmt': '{{Front}}<br>{{Audio}}',
+                    'afmt': '{{Front}}<hr id="answer">{{Back}}',
+                },
+                {
+                    'name': 'Card 2',
+                    'qfmt': '<div class=front>{{Back}}</div>',
+                    'afmt': '{{Back}}<hr id="answer">{{Front}}{{Audio}}',
+            }]
+        }
+
+        super().__init__(guid, name, model)

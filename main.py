@@ -11,7 +11,13 @@ import builddeck
 from flashcard import Flashcard
 from pyforvo import ForvoParser
 from russianwiktionaryparser import WiktionaryParser
+from manual_parser import ManualParser
 from builddeck import to_html
+
+# language = 'Spanish'
+# language_code = 'es'
+language = 'Russian'
+language_code = 'ru'
 
 
 class ProcessWords(QThread):
@@ -36,7 +42,10 @@ class ProcessWords(QThread):
     def run(self):
         for i, word in enumerate(self.words):
             self.label_update.emit(f'Checking word {word}')
-            card = Flashcard(word, WiktionaryParser(), ForvoParser())
+            if ':' in word:
+                card = Flashcard(word, ManualParser(language=language), ForvoParser(language=language_code))
+            else:
+                card = Flashcard(word, WiktionaryParser(language=language), ForvoParser(language=language_code))
             if len(card.entries) == 0:
                 self.word_done.emit(ProcessWords.WORD_NOT_FOUND)
                 self.word_not_found.emit(word)
@@ -238,7 +247,7 @@ class ResultsDisplay(QWidget):
         self.cards = cards
         self.not_found = not_found
 
-        self.deck = builddeck.RussianVocabDeck()
+        self.deck = builddeck.get_deck(language)
         self.init_ui()
 
     def init_ui(self):
